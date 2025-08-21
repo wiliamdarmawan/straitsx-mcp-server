@@ -1,0 +1,6 @@
+# StraitsX MCP Server Dependencies
+flask>=2.3.0
+flask-cors>=4.0.0
+asyncio
+pathlib
+logging

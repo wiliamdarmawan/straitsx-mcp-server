@@ -1,0 +1,188 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'StraitsX MCP Server - Serverless Deployment'
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: python3.9
+    Environment:
+      Variables:
+        ENVIRONMENT: production
+
+Parameters:
+  Stage:
+    Type: String
+    Default: prod
+    Description: API Gateway stage name
+
+Resources:
+  # Lambda Function
+  StraitsXMCPFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub straitsx-mcp-server-${Stage}
+      CodeUri: ../
+      Handler: aws-deployment/lambda-deployment.lambda_handler
+      Description: StraitsX MCP Server Lambda Function
+      Timeout: 30
+      MemorySize: 512
+      Environment:
+        Variables:
+          STAGE: !Ref Stage
+      Events:
+        ApiGateway:
+          Type: Api
+          Properties:
+            RestApiId: !Ref StraitsXMCPApi
+            Path: /{proxy+}
+            Method: ANY
+        RootApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref StraitsXMCPApi
+            Path: /
+            Method: ANY
+
+  # API Gateway
+  StraitsXMCPApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub straitsx-mcp-server-${Stage}
+      StageName: !Ref Stage
+      Cors:
+        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+      DefinitionBody:
+        swagger: '2.0'
+        info:
+          title: StraitsX MCP Server API
+          version: '1.0.0'
+          description: Professional MCP server for StraitsX payment documentation
+        paths:
+          /:
+            get:
+              summary: API Information
+              responses:
+                '200':
+                  description: API information
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StraitsXMCPFunction.Arn}/invocations'
+          /health:
+            get:
+              summary: Health Check
+              responses:
+                '200':
+                  description: Service health status
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StraitsXMCPFunction.Arn}/invocations'
+          /api/search:
+            post:
+              summary: Search Documentation
+              parameters:
+                - name: body
+                  in: body
+                  required: true
+                  schema:
+                    type: object
+                    properties:
+                      query:
+                        type: string
+                      category:
+                        type: string
+              responses:
+                '200':
+                  description: Search results
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StraitsXMCPFunction.Arn}/invocations'
+          /api/get/{page_name}:
+            get:
+              summary: Get Documentation Page
+              parameters:
+                - name: page_name
+                  in: path
+                  required: true
+                  type: string
+              responses:
+                '200':
+                  description: Documentation page content
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StraitsXMCPFunction.Arn}/invocations'
+          /api/list:
+            get:
+              summary: List Documentation
+              parameters:
+                - name: category
+                  in: query
+                  type: string
+              responses:
+                '200':
+                  description: List of documentation pages
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StraitsXMCPFunction.Arn}/invocations'
+          /api/explain:
+            post:
+              summary: Explain Payment Terms
+              parameters:
+                - name: body
+                  in: body
+                  required: true
+                  schema:
+                    type: object
+                    properties:
+                      term:
+                        type: string
+              responses:
+                '200':
+                  description: Term explanation
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StraitsXMCPFunction.Arn}/invocations'
+
+  # CloudWatch Log Group
+  StraitsXMCPLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/straitsx-mcp-server-${Stage}'
+      RetentionInDays: 30
+
+  # Lambda Permission for API Gateway
+  LambdaApiGatewayPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref StraitsXMCPFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${StraitsXMCPApi}/*/*'
+
+Outputs:
+  ApiGatewayUrl:
+    Description: API Gateway URL
+    Value: !Sub 'https://${StraitsXMCPApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}'
+    Export:
+      Name: !Sub 'StraitsXMCPServer-${Stage}-ApiUrl'
+
+  LambdaFunctionArn:
+    Description: Lambda Function ARN
+    Value: !GetAtt StraitsXMCPFunction.Arn
+    Export:
+      Name: !Sub 'StraitsXMCPServer-${Stage}-LambdaArn'
+
+  ApiGatewayId:
+    Description: API Gateway ID
+    Value: !Ref StraitsXMCPApi
+    Export:
+      Name: !Sub 'StraitsXMCPServer-${Stage}-ApiId'

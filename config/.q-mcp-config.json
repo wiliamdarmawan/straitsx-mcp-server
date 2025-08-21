@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "straitsx-docs": {
+      "command": "python3",
+      "args": ["/Users/wiliamdarmawan/Desktop/hackathon/mcp_server_q_cli.py"],
+      "env": {
+        "PYTHONPATH": "/Users/wiliamdarmawan/Desktop/hackathon"
+      }
+    }
+  }
+}

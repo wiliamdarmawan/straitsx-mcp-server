@@ -1,0 +1,17 @@
+{
+  "name": "straitsx-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server for StraitsX API Documentation with Chinese translations",
+  "main": "mcp_server_q_cli.py",
+  "scripts": {
+    "start": "python3 mcp_server_q_cli.py",
+    "test": "python3 straitsx_q_tool.py list"
+  },
+  "keywords": ["mcp", "straitsx", "payment", "api", "documentation", "chinese"],
+  "author": "StraitsX Documentation Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/straitsx-mcp-server"
+  }
+}
